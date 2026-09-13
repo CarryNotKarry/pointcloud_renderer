@@ -67,7 +67,11 @@ def export_assets(workspace, size=1600, pdf=True, comparison=False, cell=480, pr
         od = ImageDraw.Draw(overlay)
         for j, roi in enumerate(obj["rois"]):
             a,b,c,d = roi_pixels(roi,size,size)
-            od.rectangle((a,b,c-1,d-1), outline=ROI_COLORS[j], width=max(2,round(size/400)))
+            od.rectangle(
+                (a,b,c-1,d-1),
+                outline=ROI_COLORS[j],
+                width=max(2, round(4 * size / 480))
+            )
         overlay.save(dest/"roi_frames.png")
         record = dict(target=target, camera=obj["camera"], normalization=obj["normalization"],
                       radius=panels["radius"], color=obj.get("color") or session["style"]["color"], methods=[])
@@ -91,8 +95,11 @@ def export_assets(workspace, size=1600, pdf=True, comparison=False, cell=480, pr
                 crop = clean.crop(box)
                 raw_files = save_asset(crop,dest/f"{stem}_roi_{j+1}")
                 bordered = crop.copy()
-                ImageDraw.Draw(bordered).rectangle((0,0,crop.width-1,crop.height-1),
-                    outline=ROI_COLORS[j],width=max(2,round(size/400)))
+                ImageDraw.Draw(bordered).rectangle(
+                    (0,0,crop.width-1,crop.height-1),
+                    outline=ROI_COLORS[j],
+                    width=max(2, round(4 * size / 480))
+                )
                 border_files = save_asset(bordered,dest/f"{stem}_roi_{j+1}_framed")
                 crops.append(dict(pixels=list(box), clean=raw_files, framed=border_files))
             record["methods"].append(dict(name=name,input=obj["files"][name],

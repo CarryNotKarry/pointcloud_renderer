@@ -94,7 +94,7 @@ function paint(draft=null) {
     else if(p.img)ctx.drawImage(p.img,0,0,480,480);
     else {ctx.fillStyle='#829299';ctx.font='16px sans-serif';ctx.fillText('Missing / unreadable',150,245);}
     ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';
-    [...obj().rois,...(draft?[draft]:[])].forEach((r,i)=>{ctx.strokeStyle=colors[i%4];ctx.lineWidth=2;ctx.strokeRect(r.x*480,r.y*480,r.w*480,r.h*480);ctx.fillStyle=colors[i%4];ctx.font='13px sans-serif';ctx.fillText('R'+(i+1),r.x*480+4,r.y*480+15);});
+    [...obj().rois,...(draft?[draft]:[])].forEach((r,i)=>{ctx.strokeStyle=colors[i%4];ctx.lineWidth=4;ctx.strokeRect(r.x*480,r.y*480,r.w*480,r.h*480);ctx.fillStyle=colors[i%4];ctx.font='13px sans-serif';ctx.fillText('R'+(i+1),r.x*480+4,r.y*480+15);});
   }
 }
 function position(event,canvas){const b=canvas.getBoundingClientRect();return {x:Math.max(0,Math.min(1,(event.clientX-b.left)/b.width)),y:Math.max(0,Math.min(1,(event.clientY-b.top)/b.height))};}
@@ -104,7 +104,7 @@ function paintLive(camera,scale=state.style.size_scale){
     const p=canvas._panel;
     const clouds=p.overlay?images.filter(p=>p.img).map(p=>geometry[p.name]):[geometry[p.name]];
     drawLive(canvas,clouds,camera,obj().radius*scale,obj().color||state.style.color,state.style.background,+$('alpha').value);
-    const ctx=canvas.getContext('2d');obj().rois.forEach((r,i)=>{ctx.strokeStyle=colors[i];ctx.lineWidth=2;ctx.strokeRect(r.x*480,r.y*480,r.w*480,r.h*480);});
+    const ctx=canvas.getContext('2d');obj().rois.forEach((r,i)=>{ctx.strokeStyle=colors[i];ctx.lineWidth=4;ctx.strokeRect(r.x*480,r.y*480,r.w*480,r.h*480);});
   }
   status('实时几何预览 · 松开后恢复高清光照');
 }

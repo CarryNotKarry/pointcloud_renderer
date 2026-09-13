@@ -8,6 +8,9 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
+import time
+import uuid
 from dataclasses import asdict, replace
 from datetime import datetime
 from pathlib import Path
@@ -29,9 +32,31 @@ DEFAULT_STYLE = dict(color="#90AEDD", background="#FFFFFF", size_scale=1.0,
 def write_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n")
-    temporary.replace(path)
+
+    temporary = path.parent / (
+        f".{path.name}.{os.getpid()}.{uuid.uuid4().hex}.tmp"
+    )
+
+    temporary.write_text(
+        json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
+        encoding="utf-8"
+    )
+
+    try:
+        for i in range(20):
+            try:
+                os.replace(temporary, path)
+                return
+            except PermissionError:
+                if i == 19:
+                    raise
+                time.sleep(0.05)
+    finally:
+        if temporary.exists():
+            try:
+                temporary.unlink()
+            except OSError:
+                pass
 
 
 def roi_pixels(roi, width, height):
@@ -58,7 +83,7 @@ class Workspace:
         write_json(self.session_path, self.session)
 
     def load(self, path):
-        value = json.loads(Path(path).expanduser().read_text())
+        value = json.loads(Path(path).expanduser().read_text(encoding="utf-8"))
         if value.get("version") != 1 or not isinstance(value.get("objects"), dict):
             raise ValueError("Not a workbench v1 session")
         self.session = value

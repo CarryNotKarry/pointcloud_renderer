@@ -61,7 +61,7 @@ class WorkbenchTest(unittest.TestCase):
             return data
         with patch('workbench_core.render_point_cloud', fake_render):
             result = self.w.export(size=256, cell=128, pdf=False)
-        manifest = json.loads((Path(result['directory'])/'manifest.json').read_text())
+        manifest = json.loads((Path(result['directory'])/'manifest.json').read_text(encoding="utf-8"))
         methods = manifest['objects'][0]['methods']
         self.assertEqual([m['name'] for m in methods], ['Input','Missing','GT'])
         self.assertEqual(methods[1]['status'], 'missing')
@@ -118,11 +118,11 @@ class WorkbenchTest(unittest.TestCase):
         with patch('workbench_core.render_point_cloud',fake_render):
             result=self.w.export_assets(size=256,progress_path=progress)
         root=Path(result['directory'])
-        m=json.loads((root/'manifest.json').read_text())
+        m=json.loads((root/'manifest.json').read_text(encoding="utf-8"))
         self.assertEqual(result['file_count'],12)
         self.assertFalse((root/'comparison.pdf').exists())
         self.assertTrue((root/'assets.zip').is_file())
-        p=json.loads(progress.read_text())
+        p=json.loads(progress.read_text(encoding="utf-8"))
         self.assertEqual(p['completed'],p['total'])
         for asset in m['files']:
             self.assertEqual(set(asset['files']),{'png','jpg','pdf'})
@@ -135,7 +135,7 @@ class WorkbenchTest(unittest.TestCase):
             for crop in method['crops']:
                 actual=Image.open(root/crop['clean']['png'])
                 self.assertTrue(np.array_equal(np.asarray(actual),np.asarray(clean.crop(crop['pixels']))))
-        saved=json.loads((root/'session.json').read_text())
+        saved=json.loads((root/'session.json').read_text(encoding="utf-8"))
         self.assertEqual(saved['export_settings']['size'],256)
         self.assertEqual(saved['objects']['sample.xyz']['rois'],rois)
 

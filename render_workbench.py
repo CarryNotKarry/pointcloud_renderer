@@ -177,7 +177,7 @@ def main():
                 if not path.is_file():
                     self.reply({"error":"Export job not found"},404)
                 else:
-                    self.reply(json.loads(path.read_text()))
+                    self.reply(json.loads(path.read_text(encoding="utf-8")))
                 return
             if route == "/api/state":
                 try:
