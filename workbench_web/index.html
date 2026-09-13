@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Point Cloud · Paper Workbench</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<header><div class="brand"><span class="mark">◌</span><div>POINT CLOUD <small>PAPER WORKBENCH</small></div></div><div class="header-actions"><button id="openData">加载方法目录</button><button id="loadSession">打开会话</button><button id="saveSession">保存会话</button><button class="primary" id="export">导出论文图 ↗</button></div></header>
+<aside>
+<section><div class="eyebrow">01 / OBJECTS</div><h2>物体</h2><div id="objects" class="objects"></div><small>左侧勾选决定导出哪些行；点击名称切换。</small></section>
+<section><div class="eyebrow">02 / METHODS</div><h2>方法与图层</h2><div id="methods"></div><small>勾选显示 / 隐藏；↑↓ 调整论文列顺序。</small></section>
+<section><div class="eyebrow">03 / VIEW</div><h2>共享相机</h2><div class="controls">
+<label>方位角 <input id="azimuth" type="number" step="1"></label><label>仰角 <input id="elevation" type="number" min="-89" max="89" step="1"></label>
+<label>滚转 <input id="roll" type="number" step="1"></label><label>缩放 <input id="zoom" type="number" min="0.2" max="8" step="0.1"></label>
+<label>水平平移 <input id="pan_x" type="number" step="0.05"></label><label>垂直平移 <input id="pan_y" type="number" step="0.05"></label></div>
+<div class="button-row"><button id="resetCamera">重置</button><button id="saveCamera">保存视角</button><button id="loadCamera">载入视角</button></div>
+</section>
+<section><div class="eyebrow">04 / STYLE</div><h2>论文风格</h2><div class="controls">
+<label>主体颜色 <input type="color" id="color"></label><label>背景 <input type="color" id="background"></label>
+<label>点大小 × <input type="number" id="size_scale" min="0.1" max="4" step="0.01"><input aria-label="点大小滑块" id="sizeSlider" type="range" min="0.5" max="2" step="0.01"><small>论文比较推荐 0.85–1.15，同一物体所有方法同步。</small></label>
+<label>阴影 <select id="shadow_mode"><option value="soft">柔和</option><option value="none">无阴影</option></select></label>
+<label>光照 <select id="light_preset"><option value="soft">Soft</option><option value="studio">Studio</option></select></label>
+<label>当前物体颜色 <input type="color" id="objectColor"></label></div><button id="clearObjectColor">恢复统一颜色</button></section>
+</aside>
+<main><div class="workspace-heading"><div><div class="eyebrow">QUALITATIVE COMPARISON</div><h1 id="title">开始一次清晰的比较</h1></div><span id="radius" class="pill">正交投影 · 共享半径</span></div>
+<div class="toolbar"><div class="segmented"><button class="active" id="orbit">旋转视角</button><button id="roiMode">绘制局部框</button></div><label>显示 <select id="layout"><option value="compare">并排比较</option><option value="overlay">图层叠加</option></select></label><label id="alphaLabel" hidden>透明度 <input id="alpha" type="range" min="0.1" max="1" step="0.05" value="0.55"></label><span class="hint" id="hint">拖动旋转，松开后刷新所有方法；滚轮缩放。</span><button id="refresh">刷新</button></div>
+<div id="panels" class="panels"><div class="empty"><h2>一次加载所有 baseline</h2><p>选择方法目录，自动匹配同名物体。调整视角后，在任一图上框选局部，所有方法同步。</p><button id="demo">加载内置演示</button><small>演示仅使用合成采样数据，不代表真实方法结果。</small></div></div>
+<section class="roi-section"><div class="roi-heading"><div><div class="eyebrow">DETAILS / SHARED REGIONS</div><h2>局部放大区域</h2></div><div class="button-row"><button id="undoRoi">撤销框选操作</button><button id="clearRois">清空框</button><button id="addPixel">按像素添加框</button></div></div><p class="muted">画错可删除、编辑像素或撤销（Ctrl/⌘+Z）。框和相机一起保存在 JSON；改变视角后请复核框的位置。Esc 取消正在绘制的框。</p><div id="rois"></div></section>
+<div id="output"></div></main>
+<footer><span id="status">准备就绪</span><span>本地工作台 · PyVista / VTK</span></footer>
+<dialog id="dataDialog"><h2>加载多个方法目录</h2><p>每行：方法名称 | 本机目录绝对路径。目录会递归扫描 .xyz。</p><textarea id="paths" rows="7" placeholder="Input | /path/to/results/Input&#10;RepKPU | /path/to/results/RepKPU&#10;Ours | /path/to/results/Ours&#10;GT | /path/to/results/GT"></textarea><label>物体文件名（逗号分隔；留空加载全部）<input id="targets" placeholder="panda.xyz, hand.xyz"></label><p class="muted">加载新目录会替换当前会话，建议先保存当前会话。</p><div class="button-row"><button onclick="this.closest('dialog').close()">取消</button><button id="setup" class="primary">加载目录</button></div></dialog>
+<dialog id="pixelDialog"><h2>精确像素框</h2><p>坐标原点为图像左上角，不包含标签或浏览器边框。</p><div class="controls"><label>参考图像边长<input id="pixelSize" type="number" value="1600" min="1"></label><label>X<input id="px" type="number" value="400" min="0"></label><label>Y<input id="py" type="number" value="400" min="0"></label><label>宽<input id="pw" type="number" value="240" min="1"></label><label>高<input id="ph" type="number" value="240" min="1"></label></div><div class="button-row"><button onclick="this.closest('dialog').close()">取消</button><button id="savePixel" class="primary">保存区域</button></div></dialog>
+<dialog id="exportDialog"><h2>导出独立 PDF / JPG 素材</h2><p>每个物体、每种方法各自保存，图像不带方法标题和指标，方便在 WPS 自由排版。</p><div class="controls"><label>单图分辨率<input id="exportSize" type="number" value="1600" min="96" max="4096"></label><label>可选拼图列宽<input id="cellSize" type="number" value="480" min="128" max="1600"></label><label><input id="pdf" type="checkbox" checked> 同时保存独立 PDF</label><label><input id="comparison" type="checkbox"> 额外生成拼接参考图</label></div><p>默认保存 JPG + PNG + PDF：原图、带框图、局部截图、带边框局部图。另存透明框图层、统一参数 JSON、文件索引和完整 ZIP。</p><div class="button-row"><button onclick="this.closest('dialog').close()">取消</button><button id="doExport" class="primary">开始导出素材</button></div></dialog>
+<div id="exportProgress" hidden role="status" aria-live="polite"><strong id="progressText">准备导出</strong><progress id="progressBar" max="100" value="0"></progress><span id="progressDetail"></span></div>
+<script src="live.js"></script><script src="app.js"></script></body></html>

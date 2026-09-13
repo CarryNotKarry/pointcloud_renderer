@@ -1,0 +1,10 @@
+{
+  "methods": {
+    "Input": "#B8BEC8",
+    "RepKPU": "#E4B382",
+    "Grad-PU": "#91C4A8",
+    "APU-LDI": "#B1A0D0",
+    "Ours": "#90AEDD",
+    "GT": "#5F708A"
+  }
+}
