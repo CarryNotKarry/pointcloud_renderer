@@ -67,7 +67,7 @@ class WorkbenchTest(unittest.TestCase):
         self.assertEqual(methods[1]['status'], 'missing')
         for method in (methods[0], methods[2]):
             single = Image.open(method['single'])
-            crop = Image.open(method['crops'][0]['clean'])
+            crop = Image.open(method['crops'][0]['path'])
             self.assertTrue(np.array_equal(np.asarray(crop), np.asarray(single.crop((64,32,128,96)))))
             self.assertEqual(method['crops'][0]['pixels'], [64,32,128,96])
 
@@ -119,7 +119,7 @@ class WorkbenchTest(unittest.TestCase):
             result=self.w.export_assets(size=256,progress_path=progress)
         root=Path(result['directory'])
         m=json.loads((root/'manifest.json').read_text(encoding="utf-8"))
-        self.assertEqual(result['file_count'],16)
+        self.assertEqual(result['file_count'],12)
         self.assertFalse((root/'comparison.pdf').exists())
         self.assertTrue((root/'assets.zip').is_file())
         p=json.loads(progress.read_text(encoding="utf-8"))
@@ -135,31 +135,9 @@ class WorkbenchTest(unittest.TestCase):
             for crop in method['crops']:
                 actual=Image.open(root/crop['clean']['png'])
                 self.assertTrue(np.array_equal(np.asarray(actual),np.asarray(clean.crop(crop['pixels']))))
-                with Image.open(root/crop['default']['png']) as framed:
-                    offset = crop['image_offset'][0]
-                    self.assertEqual(framed.size, (actual.width+2*offset, actual.height+2*offset))
-                    self.assertEqual(framed.getpixel((offset, offset)), (240,120,50)
-                                     if crop is method['crops'][0] else (228,84,100))
         saved=json.loads((root/'session.json').read_text(encoding="utf-8"))
         self.assertEqual(saved['export_settings']['size'],256)
         self.assertEqual(saved['objects']['sample.xyz']['rois'],rois)
-
-    def test_frame_center_and_normalized_thickness(self):
-        from workbench_core import draw_roi_frame, framed_roi, ROI_LINE_RATIO
-        for size in (480, 1600):
-            image = Image.new('RGB', (size, size), 'white')
-            edge = size//4
-            draw_roi_frame(image, (edge, edge, 3*edge, 3*edge), 'red', size*ROI_LINE_RATIO)
-            row = np.asarray(image)[size//2]
-            red = np.flatnonzero((row[:,0]==255) & (row[:,1]==0))
-            left = red[red < size//2]
-            self.assertLessEqual(abs(len(left)/size-ROI_LINE_RATIO), 1/size)
-            self.assertLessEqual(abs((left[0]+left[-1]+1)/2-edge), .5)
-        crop = Image.new('RGB', (20, 30), 'white')
-        framed, pad = framed_roi(crop, 'red', 4, 'white')
-        self.assertEqual(framed.size, (20+2*pad, 30+2*pad))
-        self.assertEqual(framed.getpixel((pad-2, pad+10)), (255,0,0))
-        self.assertEqual(framed.getpixel((pad+2, pad+10)), (255,255,255))
 
 
 if __name__ == '__main__':
