@@ -24,6 +24,32 @@ from utils import (RenderConfig, CameraSpec, read_xyz, normalize_points,
 from publication_utils import export_image_pdf, load_font, sanitize_filename
 
 ROI_COLORS = ["#F07832", "#E45464", "#259CCA", "#7970CE"]
+ROI_LINE_RATIO = 4 / 480  # Same relative thickness as the browser canvas.
+
+
+def draw_roi_frame(image, box, color, width):
+    """Center the stroke on half-open image boundaries, like canvas.strokeRect."""
+    a, b, c, d = box
+    half = width / 2
+    draw = ImageDraw.Draw(image)
+    for rect in ((a-half, b-half, c+half, b+half),
+                 (a-half, d-half, c+half, d+half),
+                 (a-half, b-half, a+half, d+half),
+                 (c-half, b-half, c+half, d+half)):
+        x0, y0, x1, y1 = [math.floor(v + .5) for v in rect]
+        if x1 > x0 and y1 > y0:
+            draw.rectangle((x0, y0, x1-1, y1-1), fill=color)
+
+
+def framed_roi(crop, color, width, background):
+    """Keep the full outer half-stroke by adding a small, explicit margin."""
+    margin = math.ceil(width / 2) + 1
+    image = Image.new("RGB", (crop.width+2*margin, crop.height+2*margin), background)
+    image.paste(crop, (margin, margin))
+    draw_roi_frame(image, (margin, margin, margin+crop.width, margin+crop.height), color, width)
+    return image, margin
+
+
 DEFAULT_STYLE = dict(color="#90AEDD", background="#FFFFFF", size_scale=1.0,
                      light_preset="soft", shadow_mode="soft", shadow_opacity=0.09,
                      shadow_blur=32.0, padding=0.12)
@@ -359,11 +385,15 @@ class Workspace:
                 for j, roi in enumerate(obj["rois"]):
                     box = roi_pixels(roi, size, size)
                     color = ROI_COLORS[j]
-                    ad.rectangle((box[0], box[1], box[2]-1, box[3]-1), outline=color, width=max(2, round(size/400)))
+                    draw_roi_frame(annotated, box, color, size*ROI_LINE_RATIO)
                     crop = clean.crop(box)
+                    clean_crop_path = object_dir / f"{stem}_roi_{j+1}_clean.png"
+                    crop.save(clean_crop_path)
+                    crop, offset = framed_roi(crop, color, size*ROI_LINE_RATIO, bg)
                     crop_path = object_dir / f"{stem}_roi_{j+1}.png"
                     crop.save(crop_path)
-                    crops.append(dict(path=str(crop_path), pixels=list(box)))
+                    crops.append(dict(path=str(crop_path), clean=str(clean_crop_path),
+                                      pixels=list(box), image_offset=[offset, offset]))
                     n = len(obj["rois"])
                     cw, ch = (cell-(n-1)*8)//n, round(cell*.48)
                     tile = Image.new("RGB", (cw, ch), bg)

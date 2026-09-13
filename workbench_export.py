@@ -8,7 +8,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 from publication_utils import export_image_pdf, sanitize_filename
 from utils import CameraSpec, save_camera
-from workbench_core import ROI_COLORS, roi_pixels, write_json
+from workbench_core import (ROI_COLORS, ROI_LINE_RATIO, roi_pixels, write_json,
+                            draw_roi_frame, framed_roi)
 
 
 def export_assets(workspace, size=1600, pdf=True, comparison=False, cell=480, progress_path=None):
@@ -34,6 +35,7 @@ def export_assets(workspace, size=1600, pdf=True, comparison=False, cell=480, pr
 
     progress("准备导出独立素材")
     session["export_settings"] = dict(size=size, pdf=bool(pdf), jpg=True, png=True,
+                                      roi_line_ratio=ROI_LINE_RATIO, roi_stroke="center",
                                       comparison=bool(comparison), cell=cell)
     workspace.save()
     index = []
@@ -62,16 +64,13 @@ def export_assets(workspace, size=1600, pdf=True, comparison=False, cell=480, pr
         save_camera(CameraSpec(**obj["camera"]), dest/"camera.json",
             metadata=dict(normalization=obj["normalization"], base_radius=obj["radius"]))
         write_json(dest/"regions.json", dict(normalized=obj["rois"], colors=ROI_COLORS,
-            image_size=[size, size], pixels=[roi_pixels(r, size, size) for r in obj["rois"]]))
+            image_size=[size, size], line_width=size*ROI_LINE_RATIO, stroke="center",
+            pixels=[roi_pixels(r, size, size) for r in obj["rois"]]))
         overlay = Image.new("RGBA", (size, size))
         od = ImageDraw.Draw(overlay)
         for j, roi in enumerate(obj["rois"]):
             a,b,c,d = roi_pixels(roi,size,size)
-            od.rectangle(
-                (a,b,c-1,d-1),
-                outline=ROI_COLORS[j],
-                width=max(2, round(4 * size / 480))
-            )
+            draw_roi_frame(overlay, (a,b,c,d), ROI_COLORS[j], size*ROI_LINE_RATIO)
         overlay.save(dest/"roi_frames.png")
         record = dict(target=target, camera=obj["camera"], normalization=obj["normalization"],
                       radius=panels["radius"], color=obj.get("color") or session["style"]["color"], methods=[])
@@ -93,15 +92,14 @@ def export_assets(workspace, size=1600, pdf=True, comparison=False, cell=480, pr
             for j, roi in enumerate(obj["rois"]):
                 box = roi_pixels(roi,size,size)
                 crop = clean.crop(box)
-                raw_files = save_asset(crop,dest/f"{stem}_roi_{j+1}")
-                bordered = crop.copy()
-                ImageDraw.Draw(bordered).rectangle(
-                    (0,0,crop.width-1,crop.height-1),
-                    outline=ROI_COLORS[j],
-                    width=max(2, round(4 * size / 480))
-                )
+                raw_files = save_asset(crop,dest/f"{stem}_roi_{j+1}_clean")
+                bordered, margin = framed_roi(crop, ROI_COLORS[j], size*ROI_LINE_RATIO,
+                                              session["style"]["background"])
+                default_files = save_asset(bordered,dest/f"{stem}_roi_{j+1}")
                 border_files = save_asset(bordered,dest/f"{stem}_roi_{j+1}_framed")
-                crops.append(dict(pixels=list(box), clean=raw_files, framed=border_files))
+                crops.append(dict(pixels=list(box), clean=raw_files, framed=border_files,
+                                  default=default_files, image_offset=[margin, margin],
+                                  line_width=size*ROI_LINE_RATIO, stroke="center"))
             record["methods"].append(dict(name=name,input=obj["files"][name],
                 clean=clean_files, annotated=framed_files, crops=crops))
             progress(f"已保存 {target} / {name}",True)
